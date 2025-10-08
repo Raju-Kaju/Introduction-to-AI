@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>♻️ AI Recycling Classifier</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 25px;
+            padding: 40px;
+            max-width: 900px;
+            width: 100%;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.3);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            color: #27ae60;
+            font-size: 2.8em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .tagline {
+            color: #666;
+            font-size: 1.3em;
+            font-weight: 300;
+        }
+        
+        .stats-bar {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border-radius: 15px;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #27ae60;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        
+        #webcam-container {
+            display: flex;
+            justify-content: center;
+            margin: 30px 0;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+            background: #000;
+        }
+        
+        #webcam-container canvas {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .result-card {
+            padding: 30px;
+            border-radius: 20px;
+            margin: 25px 0;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+        }
+        
+        .result-card.recyclable {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border-color: #28a745;
+        }
+        
+        .result-card.trash {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            border-color: #dc3545;
+        }
+        
+        .result-card.neutral {
+            background: linear-gradient(135deg, #e2e3e5 0%, #d6d8db 100%);
+            border-color: #6c757d;
+        }
+        
+        .result-icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+            animation: bounce 0.6s ease;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        .result-title {
+            font-size: 2.2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .result-card.recyclable .result-title {
+            color: #155724;
+        }
+        
+        .result-card.trash .result-title {
+            color: #721c24;
+        }
+        
+        .confidence-bar {
+            margin: 20px auto;
+            max-width: 400px;
+        }
+        
+        .confidence-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .progress-bar {
+            height: 30px;
+            background: #e9ecef;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .info-box {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .info-box h3 {
+            color: #856404;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+        
+        .info-box p {
+            color: #856404;
+            line-height: 1.6;
+        }
+        
+        .info-box ul {
+            margin: 10px 0 0 20px;
+            color: #856404;
+        }
+        
+        .info-box li {
+            margin: 5px 0;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            padding: 18px 50px;
+            font-size: 1.2em;
+            border-radius: 50px;
+            cursor: pointer;
+            display: block;
+            margin: 25px auto;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(40, 167, 69, 0.3);
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(40, 167, 69, 0.5);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.4em;
+            color: #27ae60;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #27ae60;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 25px 0;
+            border-left: 5px solid #dc3545;
+        }
+        
+        .error h3 {
+            margin-bottom: 10px;
+            font-size: 1.4em;
+        }
+        
+        .instructions {
+            background: #d1ecf1;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 25px 0;
+            border-left: 5px solid #17a2b8;
+        }
+        
+        .instructions h3 {
+            color: #0c5460;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+        }
+        
+        .instructions ol {
+            margin-left: 20px;
+            color: #0c5460;
+        }
+        
+        .instructions li {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e9ecef;
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+            
+            .stats-bar {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .result-icon {
+                font-size: 3em;
+            }
+            
+            .result-title {
+                font-size: 1.6em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>♻️ AI Recycling Classifier</h1>
+            <p class="tagline">Powered by Machine Learning</p>
+        </div>
+        
+        <div class="stats-bar">
+            <div class="stat">
+                <div class="stat-number" id="total-scans">0</div>
+                <div class="stat-label">Items Scanned</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="recyclable-count">0</div>
+                <div class="stat-label">Recyclables</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="trash-count">0</div>
+                <div class="stat-label">Trash</div>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h3>📋 How to Use:</h3>
+            <ol>
+                <li><strong>Click "Start Camera"</strong> to activate your webcam</li>
+                <li><strong>Hold an item</strong> in front of the camera (recyclable or trash)</li>
+                <li><strong>Watch the AI classify</strong> in real-time!</li>
+                <li><strong>Try different items</strong> to test the AI's accuracy</li>
+            </ol>
+        </div>
+        
+        <button id="startButton">🎥 Start Camera</button>
+        
+        <div id="webcam-container"></div>
+        
+        <div id="result-display" style="display:none;">
+            <div id="result-card" class="result-card neutral">
+                <div class="result-icon" id="result-icon">🤔</div>
+                <div class="result-title" id="result-title">Analyzing...</div>
+                
+                <div class="confidence-bar">
+                    <div class="confidence-label">
+                        <span>Confidence Level</span>
+                        <span id="confidence-percent">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill" style="width: 0%">
+                            <span id="progress-text">0%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="info-box" class="info-box" style="display:none;">
+                    <h3 id="info-title">Did you know?</h3>
+                    <p id="info-text"></p>
+                </div>
+            </div>
+        </div>
+        
+        <div id="loading" class="loading" style="display:none;">
+            <div class="spinner"></div>
+            <p>Loading AI model... Please wait! 🤖</p>
+        </div>
+        
+        <div class="footer">
+            <p>Built with ❤️ using Teachable Machine by Google</p>
+            <p>High School AI Course - Module 2</p>
+        </div>
+    </div>
+
+    <!-- Teachable Machine Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+    <script>
+        // ===== CONFIGURATION =====
+        // IMPORTANT: Replace YOUR_MODEL_URL_HERE with your actual Teachable Machine model URL
+        // Example: "https://teachablemachine.withgoogle.com/models/abc123def456"
+        const modelURL = "YOUR_MODEL_URL_HERE/model.json";
+        const metadataURL = "YOUR_MODEL_URL_HERE/metadata.json";
+
+        // ===== EDUCATIONAL INFO =====
+        const recyclingFacts = {
+            recyclable: [
+                "Recycling one aluminum can saves enough energy to power a TV for 3 hours!",
+                "Plastic bottles can be recycled into clothing, carpets, and even new bottles.",
+                "Recycling one ton of paper saves 17 trees and 7,000 gallons of water.",
+                "Glass can be recycled endlessly without losing quality.",
+                "Recycling reduces greenhouse gas emissions by preventing waste from decomposing in landfills."
+            ],
+            trash: [
+                "Items contaminated with food or grease often can't be recycled.",
+                "Plastic bags can jam recycling machinery—many stores have special collection bins for them.",
+                "Not all plastics are recyclable—check the number on the bottom!",
+                "When in doubt, throw it out! Contaminated recycling can ruin entire batches.",
+                "Styrofoam takes 500 years to decompose in landfills."
+            ]
+        };
+
+        // ===== STATE VARIABLES =====
+        let model, webcam, maxPredictions;
+        let isRunning = false;
+        let stats = {
+            total: 0,
+            recyclable: 0,
+            trash: 0
+        };
+
+        // ===== DOM ELEMENTS =====
+        const startButton = document.getElementById('startButton');
+        const resultDisplay = document.getElementById('result-display');
+        const resultCard = document.getElementById('result-card');
+        const resultIcon = document.getElementById('result-icon');
+        const resultTitle = document.getElementById('result-title');
+        const confidencePercent = document.getElementById('confidence-percent');
+        const progressFill = document.getElementById('progress-fill');
+        const progressText = document.getElementById('progress-text');
+        const infoBox = document.getElementById('info-box');
+        const infoTitle = document.getElementById('info-title');
+        const infoText = document.getElementById('info-text');
+        const loadingDiv = document.getElementById('loading');
+        
+        // Stats elements
+        const totalScans = document.getElementById('total-scans');
+        const recyclableCount = document.getElementById('recyclable-count');
+        const trashCount = document.getElementById('trash-count');
+
+        // ===== EVENT LISTENERS =====
+        startButton.addEventListener('click', init);
+
+        // ===== MAIN FUNCTIONS =====
+        async function init() {
+            try {
+                startButton.style.display = 'none';
+                loadingDiv.style.display = 'block';
+
+                // Load the AI model
+                model = await tmImage.load(modelURL, metadataURL);
+                maxPredictions = model.getTotalClasses();
+
+                // Setup webcam
+                const flip = true; // flip horizontally
+                webcam = new tmImage.Webcam(500, 500, flip);
+                await webcam.setup();
+                await webcam.play();
+
+                // Hide loading, show results
+                loadingDiv.style.display = 'none';
+                resultDisplay.style.display = 'block';
+
+                // Add webcam to page
+                document.getElementById("webcam-container").appendChild(webcam.canvas);
+                
+                isRunning = true;
+                
+                // Start prediction loop
+                window.requestAnimationFrame(loop);
+            } catch (error) {
+                loadingDiv.innerHTML = `
+                    <div class="error">
+                        <h3>⚠️ Error Loading Model</h3>
+                        <p><strong>Make sure you replaced "YOUR_MODEL_URL_HERE" with your actual model URL!</strong></p>
+                        <p>Your URL should look like: https://teachablemachine.withgoogle.com/models/abc123/</p>
+                        <p style="margin-top: 15px; font-size: 0.9em;"><strong>Error details:</strong> ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function loop() {
+            if (isRunning) {
+                webcam.update();
+                await predict();
+                window.requestAnimationFrame(loop);
+            }
+        }
+
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            
+            // Find the highest prediction
+            let topPrediction = prediction[0];
+            for (let i = 1; i < maxPredictions; i++) {
+                if (prediction[i].probability > topPrediction.probability) {
+                    topPrediction = prediction[i];
+                }
+            }
+
+            // Update display
+            updateDisplay(topPrediction);
+        }
+
+        function updateDisplay(prediction) {
+            const className = prediction.className.toLowerCase();
+            const confidence = (prediction.probability * 100).toFixed(1);
+            
+            // Update confidence bar
+            confidencePercent.textContent = confidence + '%';
+            progressFill.style.width = confidence + '%';
+            progressText.textContent = confidence + '%';
+            
+            // Determine classification (only update if confidence > 70%)
+            if (prediction.probability > 0.70) {
+                if (className.includes('recycle') || className.includes('recyclable')) {
+                    updateRecyclable(confidence);
+                } else if (className.includes('trash') || className.includes('garbage')) {
+                    updateTrash(confidence);
+                }
+            } else {
+                updateUncertain(confidence);
+            }
+        }
+
+        function updateRecyclable(confidence) {
+            resultCard.className = 'result-card recyclable';
+            resultIcon.textContent = '♻️';
+            resultTitle.textContent = 'RECYCLABLE!';
+            progressFill.style.background = 'linear-gradient(90deg, #28a745 0%, #20c997 100%)';
+            
+            // Show random fact
+            showRandomFact('recyclable');
+            
+            // Update stats (only once per item)
+            if (!resultCard.dataset.counted || resultCard.dataset.lastClass !== 'recyclable') {
+                stats.recyclable++;
+                stats.total++;
+                updateStats();
+                resultCard.dataset.counted = 'true';
+                resultCard.dataset.lastClass = 'recyclable';
+            }
+        }
+
+        function updateTrash(confidence) {
+            resultCard.className = 'result-card trash';
+            resultIcon.textContent = '🗑️';
+            resultTitle.textContent = 'TRASH';
+            progressFill.style.background = 'linear-gradient(90deg, #dc3545 0%, #c82333 100%)';
+            
+            // Show random fact
+            showRandomFact('trash');
+            
+            // Update stats (only once per item)
+            if (!resultCard.dataset.counted || resultCard.dataset.lastClass !== 'trash') {
+                stats.trash++;
+                stats.total++;
+                updateStats();
+                resultCard.dataset.counted = 'true';
+                resultCard.dataset.lastClass = 'trash';
+            }
+        }
+
+        function updateUncertain(confidence) {
+            resultCard.className = 'result-card neutral';
+            resultIcon.textContent = '🤔';
+            resultTitle.textContent = 'UNCERTAIN';
+            progressFill.style.background = 'linear-gradient(90deg, #6c757d 0%, #5a6268 100%)';
+            
+            infoBox.style.display = 'block';
+            infoTitle.textContent = '💡 Low Confidence';
+            infoText.textContent = 'The AI isn\'t sure about this item. Try holding it at a different angle or in better lighting!';
+            
+            // Reset counted flag
+            resultCard.dataset.counted = 'false';
+        }
+
+        function showRandomFact(type) {
+            const facts = recyclingFacts[type];
+            const randomFact = facts[Math.floor(Math.random() * facts.length)];
+            
+            infoBox.style.display = 'block';
+            infoTitle.textContent = type === 'recyclable' ? '♻️ Recycling Fact' : '🗑️ Trash Fact';
+            infoText.textContent = randomFact;
+        }
+
+        function updateStats() {
+            totalScans.textContent = stats.total;
+            recyclableCount.textContent = stats.recyclable;
+            trashCount.textContent = stats.trash;
+            
+            // Add animation
+            totalScans.style.transform = 'scale(1.2)';
+            setTimeout(() => {
+                totalScans.style.transform = 'scale(1)';
+            }, 200);
+        }
+    </script>
+</body>
+</html>
