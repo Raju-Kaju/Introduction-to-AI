@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎬 Mood Movie Recommender</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        #webcam-container {
+            display: flex;
+            justify-content: center;
+            margin: 30px 0;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        #webcam-container canvas {
+            max-width: 100%;
+            height: auto;
+        }
+        
+        .mood-display {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 15px;
+            margin: 20px 0;
+            color: white;
+        }
+        
+        .mood-display h2 {
+            font-size: 1.8em;
+            margin-bottom: 10px;
+        }
+        
+        .confidence {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .movie-recommendation {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin-top: 20px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .movie-recommendation h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        
+        .movie-list {
+            list-style: none;
+        }
+        
+        .movie-list li {
+            padding: 10px;
+            margin: 8px 0;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            font-size: 1.1em;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.3em;
+            color: #667eea;
+        }
+        
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 5px solid #c33;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            border-radius: 50px;
+            cursor: pointer;
+            display: block;
+            margin: 20px auto;
+            transition: transform 0.2s;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .instructions {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 5px solid #2196f3;
+        }
+        
+        .instructions h4 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+        
+        .instructions p {
+            color: #555;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 Mood Movie Recommender</h1>
+        <p class="subtitle">Let AI read your mood and suggest the perfect movie!</p>
+        
+        <div class="instructions">
+            <h4>📝 Instructions:</h4>
+            <p><strong>Step 1:</strong> Click "Start Camera" below<br>
+            <strong>Step 2:</strong> Make different facial expressions (happy, sad, surprised)<br>
+            <strong>Step 3:</strong> Watch as AI recommends movies based on your mood!</p>
+        </div>
+        
+        <button id="startButton">Start Camera</button>
+        
+        <div id="webcam-container"></div>
+        
+        <div id="mood-display" style="display:none;" class="mood-display">
+            <h2>Your Mood: <span id="mood-text">Detecting...</span></h2>
+            <p class="confidence">Confidence: <span id="confidence-text">0%</span></p>
+        </div>
+        
+        <div id="movie-recommendation" style="display:none;" class="movie-recommendation">
+            <h3>🍿 Recommended Movies:</h3>
+            <ul id="movie-list" class="movie-list"></ul>
+        </div>
+        
+        <div id="loading" class="loading" style="display:none;">
+            Loading AI model... Please wait! 🤖
+        </div>
+    </div>
+
+    <!-- Teachable Machine Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+    <script>
+        // PASTE YOUR TEACHABLE MACHINE MODEL URL HERE
+        const modelURL = "YOUR_MODEL_URL_HERE/model.json";
+        const metadataURL = "YOUR_MODEL_URL_HERE/metadata.json";
+
+        // Movie recommendations for each mood
+        const movieRecommendations = {
+            "Happy": [
+                "🎭 The Grand Budapest Hotel - Keep the joy going!",
+                "🚀 Guardians of the Galaxy - Fun space adventure",
+                "🎪 La La Land - Musical celebration of life"
+            ],
+            "Sad": [
+                "😂 The Big Lebowski - Comedy to lift your spirits",
+                "🌟 Amélie - Whimsical and heartwarming",
+                "😄 Paddington 2 - Pure happiness on screen"
+            ],
+            "Surprised": [
+                "🎭 The Sixth Sense - More surprises ahead!",
+                "🧩 Inception - Mind-bending thriller",
+                "🔍 Knives Out - Mystery and twists"
+            ]
+        };
+
+        let model, webcam, maxPredictions;
+
+        const startButton = document.getElementById('startButton');
+        const moodDisplay = document.getElementById('mood-display');
+        const movieRecommendation = document.getElementById('movie-recommendation');
+        const loadingDiv = document.getElementById('loading');
+
+        startButton.addEventListener('click', init);
+
+        async function init() {
+            try {
+                startButton.style.display = 'none';
+                loadingDiv.style.display = 'block';
+
+                // Load the model
+                model = await tmImage.load(modelURL, metadataURL);
+                maxPredictions = model.getTotalClasses();
+
+                // Setup webcam
+                const flip = true;
+                webcam = new tmImage.Webcam(400, 400, flip);
+                await webcam.setup();
+                await webcam.play();
+
+                loadingDiv.style.display = 'none';
+                moodDisplay.style.display = 'block';
+                movieRecommendation.style.display = 'block';
+
+                document.getElementById("webcam-container").appendChild(webcam.canvas);
+                
+                // Start prediction loop
+                window.requestAnimationFrame(loop);
+            } catch (error) {
+                loadingDiv.innerHTML = `<div class="error">
+                    <strong>⚠️ Error:</strong> Could not load model. 
+                    <br><br>Make sure you replaced "YOUR_MODEL_URL_HERE" with your actual model URL!
+                    <br><br>Error details: ${error.message}
+                </div>`;
+            }
+        }
+
+        async function loop() {
+            webcam.update();
+            await predict();
+            window.requestAnimationFrame(loop);
+        }
+
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            
+            // Find the highest prediction
+            let topPrediction = prediction[0];
+            for (let i = 1; i < maxPredictions; i++) {
+                if (prediction[i].probability > topPrediction.probability) {
+                    topPrediction = prediction[i];
+                }
+            }
+
+            // Update mood display
+            const moodText = document.getElementById('mood-text');
+            const confidenceText = document.getElementById('confidence-text');
+            
+            moodText.textContent = getMoodEmoji(topPrediction.className) + " " + topPrediction.className;
+            confidenceText.textContent = (topPrediction.probability * 100).toFixed(0) + "%";
+
+            // Update movie recommendations
+            updateMovieRecommendations(topPrediction.className);
+        }
+
+        function getMoodEmoji(mood) {
+            const emojis = {
+                "Happy": "😊",
+                "Sad": "😢",
+                "Surprised": "😲"
+            };
+            return emojis[mood] || "🎭";
+        }
+
+        function updateMovieRecommendations(mood) {
+            const movieList = document.getElementById('movie-list');
+            const movies = movieRecommendations[mood] || ["No recommendations available"];
+            
+            movieList.innerHTML = '';
+            movies.forEach(movie => {
+                const li = document.createElement('li');
+                li.textContent = movie;
+                movieList.appendChild(li);
+            });
+        }
+    </script>
+</body>
+</html>
